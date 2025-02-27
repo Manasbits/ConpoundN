@@ -149,7 +149,7 @@ def parse_balance_sheet(markdown_text):
 
         for i in range(header_line_index + 1, len(lines)):
             line = lines[i].strip()
-            if line == '---|---|---|---|---|---|---|---|---|---|---|---|---':
+            if line == '---|---|---|---|---|---|---|---|---|---|---|---|---|---|---':
                 start_parsing = True
                 continue
             if start_parsing and line and "Total Assets" not in line:
@@ -266,7 +266,7 @@ def parse_cash_flow(markdown_text):
 
         for i in range(header_line_index + 1, len(lines)):
             line = lines[i].strip()
-            if line == '---|---|---|---|---|---|---|---|---|---|---|---|---':
+            if line == '---|---|---|---|---|---|---|---|---|---|---|---|---|---|---':
                 start_parsing = True
                 continue
             if start_parsing and line and "Net Cash Flow" not in line:
@@ -320,7 +320,7 @@ def parse_profit_loss(markdown_text):
 
         for i in range(header_line_index + 1, len(lines)):
             line = lines[i].strip()
-            if line == '---|---|---|---|---|---|---|---|---|---|---|---|---':
+            if line == '---|---|---|---|---|---|---|---|---|---|---|---|---|---|---':
                 start_parsing_metrics = True
                 continue
 
@@ -402,7 +402,7 @@ def parse_ratios(markdown_text):
 
         for i in range(header_line_index + 1, len(lines)):
             line = lines[i].strip()
-            if line == '---|---|---|---|---|---|---|---|---|---|---|---|---':
+            if line == '---|---|---|---|---|---|---|---|---|---|---|---|---|---|---':
                 start_parsing = True
                 continue
             if start_parsing and line:
@@ -722,49 +722,44 @@ async def process_and_store_chunk(company_symbol, section_name, section_data, ch
     )
     return await insert_chunk(processed_chunk) # Insert chunk into database
 
-async def main():
-    user_input = input("Enter a stock symbol or company name: ")
+async def main(user_input=None):
+    if user_input is None:
+        user_input = input("Enter a stock symbol or company name: ")
+        
     stock_info = await find_stock_symbol(user_input)
 
     if stock_info:
         company_symbol = stock_info["stock_name"].replace(" ", "").upper()
-        screener_url = f"https://www.screener.in/company/{company_symbol}/" # Define screener_url here
-        print(f"Fetching data for: {stock_info['exchange']}: {stock_info['stock_name']} ({company_symbol}) from {screener_url}") # Added screener URL to print
+        screener_url = f"https://www.screener.in/company/{company_symbol}/"
 
         # Fetch data from different sections
-        basic_data = await fetch_basic_data(company_symbol)
-        quarterly_results = await fetch_quarterly_results(company_symbol)
-        balance_sheet = await fetch_balance_sheet(company_symbol)
-        peer_comparison = await fetch_peer_comparison(company_symbol)
-        cash_flow = await fetch_cash_flow(company_symbol)
-        profit_loss = await fetch_profit_loss(company_symbol)
-        ratios = await fetch_ratios(company_symbol)
-        shareholding_pattern = await fetch_shareholding_pattern(company_symbol)
-        documents = await fetch_documents(company_symbol)
-        concalls = await fetch_concalls(company_symbol)
-
-        company_data_sections = { # Data sections in ordered dict to control chunk_number
-            "basic_data": basic_data,
-            "quarterly_results": quarterly_results,
-            "balance_sheet": balance_sheet,
-            "peer_comparison": peer_comparison,
-            "profit_loss": profit_loss,
-            "cash_flow": cash_flow,
-            "ratios": ratios,
-            "shareholding_pattern": shareholding_pattern,
-            "documents": documents,
-            "concalls": concalls,
+        company_data_sections = {
+            "basic_data": await fetch_basic_data(company_symbol),
+            "quarterly_results": await fetch_quarterly_results(company_symbol),
+            "balance_sheet": await fetch_balance_sheet(company_symbol),
+            "peer_comparison": await fetch_peer_comparison(company_symbol),
+            "profit_loss": await fetch_profit_loss(company_symbol),
+            "cash_flow": await fetch_cash_flow(company_symbol),
+            "ratios": await fetch_ratios(company_symbol),
+            "shareholding_pattern": await fetch_shareholding_pattern(company_symbol),
+            "documents": await fetch_documents(company_symbol),
+            "concalls": await fetch_concalls(company_symbol),
         }
 
-        chunk_number = 1 # Initialize chunk number
+        # Process and store chunks
+        chunk_number = 1
         for section_name, section_data in company_data_sections.items():
             await process_and_store_chunk(company_symbol, section_name, section_data, chunk_number)
-            chunk_number += 1 # Increment chunk number for next section
+            chunk_number += 1
 
-        print(f"\nData insertion completed for {stock_info['stock_name']} ({company_symbol}) into Supabase.")
+        return {
+            "symbol": company_symbol,
+            "exchange": stock_info["exchange"],
+            "url": screener_url,
+            "data": company_data_sections
+        }
 
-    else:
-        print("Could not find stock symbol. Please check the company name or symbol.")
+    return None
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -8,12 +8,10 @@ create table stock_info (
     chunk_number integer not null,
     title varchar not null,
     summary varchar not null,
-    content text not null,     -- Added content column
-    metadata jsonb not null default '{}'::jsonb,     -- Added metadata column
-    embedding vector(1536),     -- OpenAI embeddings are 1536 dimensions
+    content text not null,
+    metadata jsonb not null default '{}'::jsonb,
+    embedding vector(1536),
     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-
-    -- Add a unique constraint to prevent duplicate chunks for the same URL
     unique(url, chunk_number)
 );
 
@@ -59,8 +57,6 @@ begin
 end;
 $$;
 
--- Everything above will work for any PostgreSQL database. The below commands are for Supabase security
-
 -- Enable RLS on the table
 alter table stock_info enable row level security;
 
@@ -70,3 +66,11 @@ create policy "Allow public read access"
     for select
     to public
     using (true);
+
+-- Create a policy that allows anyone to insert. BE VERY CAREFUL WITH THIS.
+-- If you need to restrict who can insert, change the 'to public' and 'with check(true)' parts.
+create policy "Allow public insert access"
+    on stock_info
+    for insert
+    to public
+    with check (true);
